@@ -77,19 +77,18 @@ namespace SkeletonEditor
             if (Mathf.Abs(h) > 0.001f)
                 v = 0;
 
-
             if (!startMouseRotate) {
                 if (h > 0.5f) {
-                    transform.rotation = Quaternion.Euler(initRotation.eulerAngles + new Vector3(0, -90, 0));
+                    transform.rotation = Quaternion.LookRotation(Camera.main.transform.right, Camera.main.transform.right);
                 }
                 if (h < -0.5f) {
-                    transform.rotation = Quaternion.Euler(initRotation.eulerAngles + new Vector3(0, 90, 0));
+                    transform.rotation = Quaternion.Euler(initRotation.eulerAngles + new Vector3(0, -90, 0));
                 }
                 if (v > 0.5f) {
-                    transform.rotation = Quaternion.Euler(initRotation.eulerAngles + new Vector3(0, -180, 0));
+                    transform.rotation = Quaternion.Euler(initRotation.eulerAngles);
                 }
                 if (v < -0.5f) {
-                    transform.rotation = Quaternion.Euler(initRotation.eulerAngles);
+                    transform.rotation = Quaternion.Euler(initRotation.eulerAngles + new Vector3(0, -180, 0));
                 }
             }
 
