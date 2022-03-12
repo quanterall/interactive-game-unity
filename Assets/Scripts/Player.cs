@@ -9,10 +9,16 @@ public class Player : MonoBehaviour
     private float horizontalInput;
     private Rigidbody rigidBodyComponent;
     public Transform groundCheckTransform;
+    private Animator animator;
 
-    // Speach Recognition
+    // Speech Recognition
     KeywordRecognizer keywordRecognizer = null;
     Dictionary<string, System.Action> keywords = new Dictionary<string, System.Action>();
+
+    // whether the player is currently going, or not
+    private bool isGoing = false;
+    private int lastHDir = 1;  // -1=left, 1=right
+
 
     void Start()
     {
@@ -34,31 +40,39 @@ public class Player : MonoBehaviour
         keywordRecognizer.Start();
 
         rigidBodyComponent = GetComponent<Rigidbody>();
+        animator = GetComponentInChildren<Animator>();
     }
 
-    public Transform targetPos;
+    void OnDestroy()
+    {
+        keywordRecognizer.Stop();
+        keywordRecognizer.Dispose();
+        keywordRecognizer = null;
+    }
+
+    //public Transform targetPos;
     void GoCalled()
     {
-        rigidBodyComponent.AddForce(Vector3.MoveTowards(transform.position, targetPos.position, 0.5f));
-
-        jumpKeyWasPressed = false;
-        print("logSpeechMove");
+        isGoing = true;
+        //print("GO!");
     }
+
     void StopCalled()
     {
-        rigidBodyComponent.AddForce(Vector3.up * 7, ForceMode.VelocityChange);
-        jumpKeyWasPressed = false;
-        print("logSpeechJump");
+        isGoing = false;
+        //print("STOP!");
     }
+
     void JumpCalled()
     {
-        rigidBodyComponent.AddForce(Vector3.up * 7, ForceMode.VelocityChange);
-        jumpKeyWasPressed = false;
-        print("logSpeechJump");
+        //rigidBodyComponent.AddForce(Vector3.up * 7, ForceMode.VelocityChange);
+        jumpKeyWasPressed = true;
+        //print("JUMP!");
     }
+
     void KeywordRecogznierOnPhraseRecognized(PhraseRecognizedEventArgs args)
     {
-        Debug.Log("We recognized \""+ args.text + "\" with confidence " + args.confidence);
+        Debug.Log("Recognized \""+ args.text + "\" with confidence " + args.confidence);
 
         System.Action keyWordAction;
 
@@ -71,17 +85,42 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetButtonDown("Jump"))
         {
             jumpKeyWasPressed = true;
             // Debug.Log("logSpaceIsPressed");
         }
+
         horizontalInput = Input.GetAxis("Horizontal");
+        if(horizontalInput > 0f)
+        {
+            lastHDir = 1;
+            isGoing = false;
+        }
+        else if(horizontalInput < 0f)
+        {
+            lastHDir = -1;
+            isGoing = false;
+        }
+
+        // set walking speed
+        float speed = !isGoing ? horizontalInput : lastHDir;
+        animator.SetFloat("speedv", Mathf.Abs(speed));
+
+        // player rotation
+        if (speed > 0.5f)
+        {
+            animator.transform.rotation = Quaternion.LookRotation(Vector3.right);
+        }
+        if (speed < -0.5f)
+        {
+            animator.transform.rotation = Quaternion.LookRotation(Vector3.left);
+        }
     }
 
     private void FixedUpdate()
     {
-        rigidBodyComponent.velocity = new Vector3(horizontalInput, rigidBodyComponent.velocity.y, 0);
+        rigidBodyComponent.velocity = new Vector3(!isGoing ? horizontalInput : lastHDir, rigidBodyComponent.velocity.y, 0);
 
         if (Physics.OverlapSphere(groundCheckTransform.position, 0.1f).Length == 1)
         {
@@ -91,8 +130,9 @@ public class Player : MonoBehaviour
         if (jumpKeyWasPressed)
         {
             rigidBodyComponent.AddForce(Vector3.up * 7, ForceMode.VelocityChange);
+
             jumpKeyWasPressed = false;
-            Debug.Log("logSpaceIsPressed");
+            //Debug.Log("Started jumping...");
         }
 
         RaycastHit hit;
@@ -104,21 +144,20 @@ public class Player : MonoBehaviour
             if (distanceToGround <= 0.5 && (gameObject.layer == 8))
             {
                 GoCalled();
-                print("DISTANCE HERER");
+                Debug.Log("DISTANCE HERER");
             }
 
         }
-        else {
-        }
-    }
-    private void onCollisionEnter(Collision collison)
-    {
-        print(gameObject.layer);
     }
 
-    private void onCollisionExit(Collision collison)
-    {
-    }
+    //private void onCollisionEnter(Collision collison)
+    //{
+    //    print(gameObject.layer);
+    //}
+
+    //private void onCollisionExit(Collision collison)
+    //{
+    //}
 
     public LayerMask layerMask;
 
@@ -128,6 +167,7 @@ public class Player : MonoBehaviour
         {
             Destroy(other.gameObject);
         }
+
         if ((layerMask.value & (1 << other.transform.gameObject.layer)) > 0)
         {
             JumpCalled();
